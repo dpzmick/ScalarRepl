@@ -103,10 +103,16 @@ static RegisterPass<SROA> X("scalarrepl-zmick2", "Scalar Replacement of Aggregat
 // http://stackoverflow.com/questions/11186052/segfault-when-using-getelementptrinst-with-an-arrayref-containing-more-than-one
 static llvm::LLVMContext& global = llvm::getGlobalContext();
 static llvm::Type* int1ty = llvm::Type::getInt1Ty(global);
+static llvm::Type* int64ty = llvm::Type::getInt64Ty(global);
 
 llvm::ConstantInt* getInt1(int n)
 {
     return llvm::ConstantInt::get(llvm::Type::getInt1Ty(global), n);
+}
+
+llvm::ConstantInt* getInt64(int n)
+{
+    return llvm::ConstantInt::get(llvm::Type::getInt64Ty(global), n);
 }
 
 bool SROA::allocaPromoteable(const AllocaInst &I) {
@@ -189,16 +195,33 @@ std::vector<AllocaInst*> SROA::findPromotableAllocas(Function &F) {
 void SROA::modifyGEP(GetElementPtrInst *gep, std::vector<AllocaInst*> new_fields) {
   DEBUG(errs() << "modifying gep: " << *gep << "\n");
   std::vector<Value*> ids(gep->op_begin() + 1, gep->op_end());
-  assert(ids.size() >= 2);
 
   // get the alloca that allocated the field we are accessing
   auto i = dyn_cast<ConstantInt>(ids[1])->getSExtValue();
   auto alloca_to_use = new_fields[i];
 
-  // do I need to consider different types of GEPs
+  if (ids.size() == 2) {
+    // the GEP is just a "dereference," we need to remove it totally
+    BasicBlock::iterator ii(gep);
+    ReplaceInstWithValue(gep->getParent()->getInstList(), ii, alloca_to_use);
+  } else {
+    // we need a new GEP with two less derefs
+    // the first in the original gets the struct, the second gets the field
+    // the remaining derefs are what we need to preserve
+    std::vector<Value*> newOffsets(ids.begin() + 2, ids.end());
+    // push a zero on the front to deref the pointer, then do whatever the
+    // original instruction did
+    newOffsets.insert(newOffsets.begin(), getInt64(0));
+    auto newGEP = GetElementPtrInst::CreateInBounds(
+        alloca_to_use,
+        newOffsets,
+        "newGEP"
+        );
 
-  BasicBlock::iterator ii(gep);
-  ReplaceInstWithValue(gep->getParent()->getInstList(), ii, alloca_to_use);
+    DEBUG(errs() << "newGEP: " << *newGEP << "\n");
+
+    ReplaceInstWithInst(gep, newGEP);
+  }
 }
 
 void SROA::modifyCMP(CmpInst *cmp) {
