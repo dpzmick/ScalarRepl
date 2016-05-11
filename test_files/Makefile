@@ -1,9 +1,9 @@
 CC = clang
 OPT = opt -load ../build/lib/LLVM-ScalarRepl.so -debug -stats -unroll-runtime=1
 
-LOOP = -simplifycfg  -loops  -lcssa -loop-simplify -loop-rotate -loop-unroll -unroll-count=3 -unroll-allow-partial
 # Change this to run whatever optimization passes you want
-OPTS = -scalarrepl-zmick2 -adce
+OPTS = -targetlibinfo -tti -no-aa -tbaa -scoped-noalias -assumption-cache-tracker -basicaa -ipsccp -globalopt -deadargelim -domtree -instcombine -simplifycfg -basiccg -prune-eh -inline-cost -inline -functionattrs -domtree -scalarrepl-zmick2 -early-cse -lazy-value-info -jump-threading -correlated-propagation -simplifycfg -domtree -instcombine -tailcallelim -simplifycfg -reassociate -domtree -loops -loop-simplify -lcssa -loop-rotate -licm -loop-unswitch -instcombine -scalar-evolution -loop-simplify -lcssa -indvars -loop-idiom -loop-deletion -loop-unroll -mldst-motion -domtree -memdep -gvn -memdep -memcpyopt -sccp -domtree -bdce -instcombine -lazy-value-info -jump-threading -correlated-propagation -domtree -memdep -dse -loops -loop-simplify -lcssa -licm -adce -simplifycfg -domtree -instcombine -barrier -float2int -domtree -loops -loop-simplify -lcssa -loop-rotate -branch-prob -block-freq -scalar-evolution -loop-accesses -loop-vectorize -instcombine -scalar-evolution -slp-vectorizer -simplifycfg -domtree -instcombine -loops -loop-simplify -lcssa -scalar-evolution -loop-unroll -instcombine -loop-simplify -lcssa -licm -scalar-evolution -alignment-from-assumptions -strip-dead-prototypes -elim-avail-extern -globaldce -constmerge -verify
+# OPTS = -scalarrepl-zmick2 -adce
 
 make:
 	@make -s -C ../build

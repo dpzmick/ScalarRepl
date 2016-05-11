@@ -1,11 +1,11 @@
 struct forced {
   int a;
-  int b;
   char c;
+  int b;
 };
 
 // declared "elsewhere" but actually nowhere
-void foo(struct forced);
+extern void foo(struct forced);
 
 int main(int argc, char *argv[]) {
   struct forced a;
